@@ -1,4 +1,4 @@
-# import requests
+import requests
 import time
 import datetime
 import pytz
@@ -7,6 +7,7 @@ import asyncio
 from requests_html import HTMLSession
 from aiohttp import ClientSession
 
+BASE_URL ='https://query1.finance.yahoo.com/v8/finance/chart/'
 df = pd.DataFrame(columns=["symbol, ""open", "high", "low", "close", "volume"])
 
 def force_float(elt):
@@ -48,7 +49,7 @@ async def get_price(ticker, interval_type=None, start_sec=None):
     """
     # interval_type : 1d", "5d", "1mo", "3mo","6mo", "1y", "2y", "5y", "10y", "ytd", "max"
     """
-    base_url ='https://query1.finance.yahoo.com/v8/finance/chart/'
+    
     # start_seconds = int(time.time()) - 386400
     if interval_type is None:
         interval_type = "1d"
@@ -71,7 +72,7 @@ async def get_price(ticker, interval_type=None, start_sec=None):
     # params = {"period1": start_seconds, "period2": end_seconds, "interval" : interval_type, "events": "div,splits"}
     params = {"startTime": start_seconds, "endTime": end_seconds, "interval" : interval_type}
     # ticker = "ET"
-    site = base_url + ticker
+    site = BASE_URL + ticker
     # resp = requests.get(site, params = params)
     async with ClientSession() as session:
         resp = await session.request(method="GET", url=site, params=params)
@@ -113,22 +114,22 @@ async def get_price(ticker, interval_type=None, start_sec=None):
 async def get_tickers_price(tickers):
     await asyncio.wait([get_price(ticker) for ticker in tickers])
 
-async def get_history_price(ticker, range_day=1 start_sec=None, interval=None):
+async def get_history_price(ticker, range_day=1, start_sec=None, interval=None):
     if start_sec is None:
-        start_sec = int(time.time()) - (range_day * 86400)
+        start_seconds = int(time.time()) - (range_day * 86400)
     
-    end_sec = start_sec + (range_day * 86400) + 3600
+    end_seconds = start_seconds + (range_day * 86400) + 3600
     if range_day <= 7:
         if interval is None:
             interval = "1m"
         elif interval not in ("1m", "2m", "5m", "15m", "30m", "60m", "1h", "90m"):
             raise AssertionError("interval valid : 1m, 2m, 5m, 15m, 30m, 60m, 90m, 1h")
-    if range_day <= 60:
+    elif range_day <= 60:
         if interval is None:
             interval = "2m"
         elif interval not in ("2m", "5m", "15m", "30m", "60m", "1h", "90m", "1d", "5d", "1wk"):
             raise AssertionError("interval valid : 2m, 5m, 15m, 30m, 60m, 90m, 1h, 1d, 5d, 1wk")
-    if range_day <= 730:
+    elif range_day <= 730:
         if interval is None:
             interval = "1h"
         elif interval not in ("60m", "1h", "90m", "1d", "5d", "1wk", "1mo", "3mo"):
@@ -136,41 +137,40 @@ async def get_history_price(ticker, range_day=1 start_sec=None, interval=None):
     else:
         raise AssertionError("range_day max is 730 days")
 
-    range_s = str(range_day_day) + "d"
-    params = {"period1": start_seconds, "period2": end_seconds, "interval" : interval_type, "range_day" : range_s}
+    range_s = str(range_day) + "d"
+    params = {"period1": start_seconds, "period2": end_seconds, "interval" : interval, "range" : range_s}
+    site = BASE_URL + ticker
     async with ClientSession() as session:
-        resp = await session.request(method="GET", url=site, params=params)
+        resp = await session.request(method="GET", url=site, params=params, ssl= False)
         data = await resp.json()
         frame = pd.DataFrame(data["chart"]["result"][0]["indicators"]["quote"][0])
         temp_time = data["chart"]["result"][0]["timestamp"]
 
         frame.index = pd.to_datetime(temp_time, unit = "s")
         frame = frame[["open", "high", "low", "close", "volume"]]
-        frame.index = frame.index.map(lambda dt: dt.floor("d"))
-        file_res = open("{}.txt".format(ticker), "w")
-        file_res.writelines(data)
-        file_res.close()
+        # frame.index = frame.index.map(lambda dt: dt.floor("d"))
+        frame.to_json("res.txt")
 
 async def main():
-    start_time = int(time.time())
-    tickers = (get_day_most_active(10))["Symbol"].values.tolist()
-    last_refresh = int(time.time())
-    while True:
-        await get_tickers_price(tickers)
-        if (last_refresh - int(time.time())) > 300:
-            tickers = (get_day_most_active(10))["Symbol"].values.tolist()
-            last_refresh = int(time.time())
-        else:
-            await asyncio.sleep(3)
+    # start_time = int(time.time())
+    # tickers = (get_day_most_active(10))["Symbol"].values.tolist()
+    # last_refresh = int(time.time())
+    # while True:
+    #     await get_tickers_price(tickers)
+    #     if (last_refresh - int(time.time())) > 300:
+    #         tickers = (get_day_most_active(10))["Symbol"].values.tolist()
+    #         last_refresh = int(time.time())
+    #     else:
+    #         await asyncio.sleep(3)
         
-        if (int(time.time())-start_time) >= 1440:
-            break
+    #     if (int(time.time())-start_time) >= 1440:
+    #         break
         
-    print(int(time.time()))
+    # print(int(time.time()))
     # await get_price('MRO')
-    
+    await get_history_price('ET', 60, interval="2m")
 
 if __name__ == "__main__":
     # asyncio.run(main(), debug=True)
     asyncio.run(main())
-    # main()
+    
