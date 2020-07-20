@@ -1,0 +1,29 @@
+git clone <ssh_address>
+cd repo_folder
+
+git status
+
+#create branch
+git checkout -b initial 
+
+# add all changes
+git add -A
+
+git status
+#commit to local hard drive
+git commit -m "Initial commit"
+
+#commit to repository with branch name initial-config
+git push origin initial-config
+
+
+# goto github
+#   notice new branch, compare & pull requests
+#   click create pull requests
+#   go to pull request tab
+#       click merge pull request (to merge to main branch)
+#       delete branch (initial-config), not neeeded as merge w branch, change history kept
+
+# switch back to master branch, and update local repository
+git checkout master
+git pull
