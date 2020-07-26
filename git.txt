@@ -27,3 +27,5 @@ git push origin initial-config
 # switch back to master branch, and update local repository
 git checkout master
 git pull
+
+# jupyter notebook
